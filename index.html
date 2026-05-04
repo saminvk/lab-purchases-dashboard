@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab Purchases Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 20px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+    .header-sub { font-size: 12px; opacity: 0.75; margin-top: 3px; }
+    .refresh-btn {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: white;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.28); }
+    .refresh-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Filters ── */
+    .filters {
+      background: white;
+      padding: 12px 32px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      flex-wrap: wrap;
+    }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-label { font-size: 12px; font-weight: 600; color: #64748b; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.4px; }
+    .filter-group select, .filter-group input[type="month"] {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 13px;
+      color: #1e293b;
+      background: white;
+      cursor: pointer;
+    }
+    .filter-group select:focus, .filter-group input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+    .reset-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #64748b;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .reset-btn:hover { background: #e2e8f0; }
+    .filter-count { font-size: 12px; color: #94a3b8; margin-left: 4px; }
+
+    /* ── Content ── */
+    .content { padding: 20px 32px; max-width: 1440px; margin: 0 auto; }
+
+    /* ── KPI Cards ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .kpi-card {
+      background: white;
+      border-radius: 10px;
+      padding: 18px 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      border-left: 4px solid transparent;
+    }
+    .kpi-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; }
+    .kpi-value { font-size: 28px; font-weight: 800; margin-top: 5px; color: #0f172a; line-height: 1.1; }
+    .kpi-sub { font-size: 11px; color: #94a3b8; margin-top: 5px; }
+
+    /* ── Charts ── */
+    .charts-row { display: grid; gap: 14px; margin-bottom: 14px; }
+    .charts-row-2 { grid-template-columns: 3fr 2fr; }
+    .charts-row-1 { grid-template-columns: 1fr; }
+    .chart-card {
+      background: white;
+      border-radius: 10px;
+      padding: 18px 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    }
+    .chart-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 14px;
+    }
+    .chart-wrap { position: relative; }
+
+    /* ── Table ── */
+    .table-card {
+      background: white;
+      border-radius: 10px;
+      padding: 18px 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      margin-bottom: 32px;
+    }
+    .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .table-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; }
+    .search-input {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      width: 240px;
+      color: #1e293b;
+    }
+    .search-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left;
+      padding: 9px 12px;
+      background: #f8fafc;
+      border-bottom: 2px solid #e2e8f0;
+      font-weight: 700;
+      color: #64748b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+    th:hover { background: #f1f5f9; color: #475569; }
+    th.sort-asc::after { content: ' ↑'; color: #2563eb; }
+    th.sort-desc::after { content: ' ↓'; color: #2563eb; }
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+      vertical-align: middle;
+    }
+    td.item-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-ordered { background: #dcfce7; color: #15803d; }
+    .badge-pending { background: #fef9c3; color: #a16207; }
+    .member-chip {
+      display: inline-flex;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      white-space: nowrap;
+    }
+    .link-btn {
+      color: #2563eb;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .link-btn:hover { text-decoration: underline; }
+
+    /* ── Pagination ── */
+    .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+    .page-btn {
+      padding: 5px 11px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      background: white;
+      color: #475569;
+      min-width: 34px;
+      text-align: center;
+    }
+    .page-btn:hover { background: #f1f5f9; }
+    .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; font-weight: 700; }
+    .page-btn:disabled { opacity: 0.4; cursor: default; }
+    .page-info { font-size: 12px; color: #94a3b8; }
+
+    /* ── Loading / Error ── */
+    .loading { text-align: center; padding: 100px 32px; color: #94a3b8; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { font-size: 15px; }
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 24px 32px;
+      margin: 32px;
+      color: #dc2626;
+    }
+    .error-box h3 { font-size: 16px; margin-bottom: 8px; }
+    .error-box p { font-size: 13px; color: #ef4444; line-height: 1.5; }
+
+    /* ── Savings Section ── */
+    #savings-section { padding: 0 32px 20px; max-width: 1440px; margin: 0 auto; }
+
+    .savings-banner {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(6,79,59,0.25);
+    }
+    .savings-banner-left { display: flex; align-items: center; gap: 16px; }
+    .savings-banner-icon { font-size: 32px; line-height: 1; }
+    .savings-banner-title { font-size: 16px; font-weight: 700; }
+    .savings-banner-sub { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+    .savings-banner-right { text-align: right; }
+    .savings-total-label { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; }
+    .savings-total-value { font-size: 28px; font-weight: 800; margin-top: 2px; }
+    .savings-total-sub { font-size: 11px; opacity: 0.7; margin-top: 3px; }
+
+    .savings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .savings-card {
+      background: white;
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      border-top: 3px solid transparent;
+    }
+    .savings-high { border-top-color: #16a34a; }
+    .savings-medium { border-top-color: #f59e0b; }
+    .savings-investigate { border-top-color: #6366f1; }
+    .savings-ok { border-top-color: #94a3b8; background: #f8fafc; }
+
+    .savings-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px; }
+    .savings-item-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .savings-item-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+
+    .savings-pct {
+      white-space: nowrap;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      flex-shrink: 0;
+    }
+    .savings-pct-high { background: #dcfce7; color: #166534; }
+    .savings-pct-med  { background: #fef3c7; color: #92400e; }
+    .savings-pct-inv  { background: #ede9fe; color: #4c1d95; }
+    .savings-pct-ok   { background: #f1f5f9; color: #64748b; }
+
+    .savings-compare {
+      display: grid;
+      grid-template-columns: 1fr 28px 1fr;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .savings-arrow { text-align: center; font-size: 16px; color: #94a3b8; }
+    .savings-col-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 4px; }
+    .savings-vendor { font-size: 12px; font-weight: 600; color: #1e293b; }
+    .savings-vendor a { color: #2563eb; text-decoration: none; }
+    .savings-vendor a:hover { text-decoration: underline; }
+    .savings-price { font-size: 15px; font-weight: 800; margin-top: 2px; }
+    .savings-current .savings-price { color: #dc2626; }
+    .savings-alt .savings-price { color: #16a34a; }
+    .savings-price-note { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+    .savings-or { font-size: 10px; color: #94a3b8; font-weight: 400; }
+
+    .savings-footer { border-top: 1px solid #f1f5f9; padding-top: 10px; }
+    .savings-annual { font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 5px; }
+    .savings-note { font-size: 11px; line-height: 1.5; border-radius: 6px; padding: 6px 10px; }
+    .savings-note a { color: #2563eb; text-decoration: none; }
+    .savings-note a:hover { text-decoration: underline; }
+    .savings-note-green { background: #f0fdf4; color: #166534; }
+    .savings-note-yellow { background: #fffbeb; color: #92400e; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-row-2 { grid-template-columns: 1fr; }
+      .savings-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .content { padding: 14px 16px; }
+      .filters { padding: 10px 16px; gap: 12px; }
+      .header { padding: 14px 16px; flex-direction: column; gap: 10px; align-items: flex-start; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .kpi-value { font-size: 22px; }
+      #savings-section { padding: 0 16px 16px; }
+      .savings-banner { flex-direction: column; gap: 12px; align-items: flex-start; }
+      .savings-banner-right { text-align: left; }
+      .savings-compare { grid-template-columns: 1fr; }
+      .savings-arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <h1>Lab Purchases Dashboard</h1>
+    <div class="header-sub" id="last-updated">Loading data...</div>
+  </div>
+  <button class="refresh-btn" id="refresh-btn" onclick="loadData()">↻ Refresh</button>
+</header>
+
+<div class="filters" id="filters" style="display:none">
+  <div class="filter-group">
+    <span class="filter-label">From</span>
+    <input type="month" id="filter-start" onchange="applyFilters()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">To</span>
+    <input type="month" id="filter-end" onchange="applyFilters()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Member</span>
+    <select id="filter-member" onchange="applyFilters()">
+      <option value="all">All Members</option>
+    </select>
+  </div>
+  <button class="reset-btn" onclick="resetFilters()">Reset</button>
+  <span class="filter-count" id="filter-count"></span>
+</div>
+
+<div id="loading" class="loading">
+  <div class="spinner"></div>
+  <p>Fetching purchases from Google Sheets...</p>
+</div>
+
+<div id="error-container" style="display:none"></div>
+
+<div id="dashboard" style="display:none">
+  <div class="content">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card" style="border-color:#2563eb">
+        <div class="kpi-label">Total Spend</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub" id="kpi-total-sub"></div>
+      </div>
+      <div class="kpi-card" style="border-color:#16a34a">
+        <div class="kpi-label">Orders</div>
+        <div class="kpi-value" id="kpi-orders">—</div>
+        <div class="kpi-sub" id="kpi-orders-sub"></div>
+      </div>
+      <div class="kpi-card" style="border-color:#9333ea">
+        <div class="kpi-label">Top Spender</div>
+        <div class="kpi-value" id="kpi-member">—</div>
+        <div class="kpi-sub" id="kpi-member-sub"></div>
+      </div>
+      <div class="kpi-card" style="border-color:#ea580c">
+        <div class="kpi-label">Avg Order Value</div>
+        <div class="kpi-value" id="kpi-avg">—</div>
+        <div class="kpi-sub" id="kpi-avg-sub"></div>
+      </div>
+    </div>
+
+    <!-- Monthly spending (full width) -->
+    <div class="charts-row charts-row-1" style="margin-bottom:14px">
+      <div class="chart-card">
+        <div class="chart-title">Monthly Spending</div>
+        <div class="chart-wrap"><canvas id="chart-monthly" height="100"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Member + Vendor -->
+    <div class="charts-row charts-row-2" style="margin-bottom:14px">
+      <div class="chart-card">
+        <div class="chart-title">Spending by Member</div>
+        <div class="chart-wrap"><canvas id="chart-member" height="180"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Vendor Breakdown</div>
+        <div class="chart-wrap"><canvas id="chart-vendor" height="180"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Top items (full width) -->
+    <div class="charts-row charts-row-1" style="margin-bottom:20px">
+      <div class="chart-card">
+        <div class="chart-title">Top 10 Items by Cost</div>
+        <div class="chart-wrap"><canvas id="chart-items" height="100"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Savings Opportunities -->
+    <div id="savings-section">
+      <div class="savings-banner">
+        <div class="savings-banner-left">
+          <div class="savings-banner-icon">💰</div>
+          <div>
+            <div class="savings-banner-title">Savings Opportunities Identified</div>
+            <div class="savings-banner-sub">Based on current market pricing for your most frequently reordered items</div>
+          </div>
+        </div>
+        <div class="savings-banner-right">
+          <div class="savings-total-label">Est. Annual Savings</div>
+          <div class="savings-total-value">~$1,580 – $1,950</div>
+          <div class="savings-total-sub">across 3 confirmed item switches</div>
+        </div>
+      </div>
+
+      <div class="savings-grid">
+
+        <!-- 4-OHT -->
+        <div class="savings-card savings-high">
+          <div class="savings-card-header">
+            <div>
+              <div class="savings-item-name">4-OHT (4-Hydroxytamoxifen)</div>
+              <div class="savings-item-meta">Sigma H6278 · ≥70% Z-isomer · 4 orders/yr</div>
+            </div>
+            <div class="savings-pct savings-pct-high">up to 48% off</div>
+          </div>
+          <div class="savings-compare">
+            <div class="savings-col savings-current">
+              <div class="savings-col-label">Current</div>
+              <div class="savings-vendor">Sigma-Aldrich</div>
+              <div class="savings-price">$98 / 10 mg</div>
+              <div class="savings-price-note">($490 per cycle of 5 bottles)</div>
+            </div>
+            <div class="savings-arrow">→</div>
+            <div class="savings-col savings-alt">
+              <div class="savings-col-label">Alternative</div>
+              <div class="savings-vendor"><a href="https://hellobio.com/4-hydroxytamoxifen.html" target="_blank" rel="noopener">Hello Bio HB6040</a></div>
+              <div class="savings-price">$73 / 10 mg &nbsp;<span class="savings-or">or</span>&nbsp; $253 / 50 mg</div>
+              <div class="savings-price-note">($365 / cycle at 10 mg · $253 / cycle at 50 mg)</div>
+            </div>
+          </div>
+          <div class="savings-footer">
+            <div class="savings-annual">Est. savings: <strong>$940 – $950 / year</strong> (4 orders)</div>
+            <div class="savings-note savings-note-green">✓ Same spec — ≥70% Z-isomer, ≥98% purity. Hello Bio is a reputable life science supplier. Drop-in replacement.</div>
+          </div>
+        </div>
+
+        <!-- AAV titration kit -->
+        <div class="savings-card savings-high">
+          <div class="savings-card-header">
+            <div>
+              <div class="savings-item-name">AAV Titration Kit (qPCR)</div>
+              <div class="savings-item-meta">Takara Bio #6233 · 2 orders/yr</div>
+            </div>
+            <div class="savings-pct savings-pct-high">~49% off</div>
+          </div>
+          <div class="savings-compare">
+            <div class="savings-col savings-current">
+              <div class="savings-col-label">Current</div>
+              <div class="savings-vendor">Takara Bio (AAVpro Ver.2)</div>
+              <div class="savings-price">$568 / kit</div>
+              <div class="savings-price-note">(100 rxns, SYBR-based)</div>
+            </div>
+            <div class="savings-arrow">→</div>
+            <div class="savings-col savings-alt">
+              <div class="savings-col-label">Alternative</div>
+              <div class="savings-vendor"><a href="https://bpsbioscience.com/aav-qpcr-titration-kit-82812" target="_blank" rel="noopener">BPS Bioscience #82812</a></div>
+              <div class="savings-price">$275 – $295 / kit</div>
+              <div class="savings-price-note">(100 rxns, AAV2-ITR qPCR, no digestion step)</div>
+            </div>
+          </div>
+          <div class="savings-footer">
+            <div class="savings-annual">Est. savings: <strong>$546 – $586 / year</strong> (2 orders)</div>
+            <div class="savings-note savings-note-yellow">⚠ Verify: same ITR-targeting chemistry. Run one parallel comparison before fully switching. Also consider <a href="https://www.abmgood.com/qpcr-adeno-associated-virus-titration-titer-kit-g931.html" target="_blank">ABM G931</a> (get quote).</div>
+          </div>
+        </div>
+
+        <!-- Microtome blades -->
+        <div class="savings-card savings-medium">
+          <div class="savings-card-header">
+            <div>
+              <div class="savings-item-name">Microtome Blades</div>
+              <div class="savings-item-meta">Type not recorded in sheet · 2 orders/yr · $306 avg</div>
+            </div>
+            <div class="savings-pct savings-pct-med">27 – 38% off</div>
+          </div>
+          <div class="savings-compare">
+            <div class="savings-col savings-current">
+              <div class="savings-col-label">Current (est.)</div>
+              <div class="savings-vendor">Unknown vendor</div>
+              <div class="savings-price">~$150 / pack</div>
+              <div class="savings-price-note">(estimated from order total)</div>
+            </div>
+            <div class="savings-arrow">→</div>
+            <div class="savings-col savings-alt">
+              <div class="savings-col-label">Alternatives</div>
+              <div class="savings-vendor"><a href="https://store.ihcworld.com/feather-microtome-blades-c35-low-profile-20-blades-pack/" target="_blank" rel="noopener">Feather C35 @ IHC World</a></div>
+              <div class="savings-price">$125 / 20 blades</div>
+              <div class="savings-price-note">or CL Sturkey Select: <strong>$91 / 20 blades</strong></div>
+            </div>
+          </div>
+          <div class="savings-footer">
+            <div class="savings-annual">Est. savings: <strong>$60 – $120 / year</strong> (depends on current source)</div>
+            <div class="savings-note savings-note-yellow">⚠ First step: record the exact blade catalog number in the sheet. Match blade profile (standard vs. low-profile) to your cryostat before switching.</div>
+          </div>
+        </div>
+
+        <!-- 10x PBS -->
+        <div class="savings-card savings-investigate">
+          <div class="savings-card-header">
+            <div>
+              <div class="savings-item-name">10× PBS (Roche #11666789001)</div>
+              <div class="savings-item-meta">2 orders · $189 / order · ~$378 total</div>
+            </div>
+            <div class="savings-pct savings-pct-inv">Investigate</div>
+          </div>
+          <div class="savings-compare">
+            <div class="savings-col savings-current">
+              <div class="savings-col-label">Current</div>
+              <div class="savings-vendor">Roche</div>
+              <div class="savings-price">$189 / order</div>
+              <div class="savings-price-note">(likely 2 × 500 mL at ~$95 each)</div>
+            </div>
+            <div class="savings-arrow">→</div>
+            <div class="savings-col savings-alt">
+              <div class="savings-col-label">Alternative</div>
+              <div class="savings-vendor"><a href="https://www.fishersci.com/shop/products/pbs-phosphate-buffered-saline-10x-solution-fisher-bioreagents/BP399500" target="_blank" rel="noopener">Fisher BioReagents BP399500</a></div>
+              <div class="savings-price">~$18 – $30 / 500 mL</div>
+              <div class="savings-price-note">(institutional pricing; or Corning PBS via VWR)</div>
+            </div>
+          </div>
+          <div class="savings-footer">
+            <div class="savings-annual">Potential savings: <strong>large if Roche is at list price</strong></div>
+            <div class="savings-note savings-note-yellow">⚠ PBS is a commodity buffer — no application-specific reason to use Roche. Confirm exact bottle size in your orders first, then get Fisher institutional quote.</div>
+          </div>
+        </div>
+
+        <!-- Filter paper -->
+        <div class="savings-card savings-investigate">
+          <div class="savings-card-header">
+            <div>
+              <div class="savings-item-name">Thick Chromatography Filter Paper</div>
+              <div class="savings-item-meta">Cat #05-714-4 (0.35 mm) · 5 orders · ~$360 avg = ~$1,800 total</div>
+            </div>
+            <div class="savings-pct savings-pct-inv">Investigate</div>
+          </div>
+          <div class="savings-compare">
+            <div class="savings-col savings-current">
+              <div class="savings-col-label">Current</div>
+              <div class="savings-vendor">Fisher / Fisherbrand</div>
+              <div class="savings-price">~$316 – $400 / order</div>
+              <div class="savings-price-note">(pure cellulose, 0.35 mm)</div>
+            </div>
+            <div class="savings-arrow">→</div>
+            <div class="savings-col savings-alt">
+              <div class="savings-col-label">Alternative</div>
+              <div class="savings-vendor"><a href="https://us.vwr.com/store/product/4692300/tissue-tek-o-c-t-compound-sakura-finetek" target="_blank" rel="noopener">Whatman 3MM Chr via VWR</a></div>
+              <div class="savings-price">Get VWR quote</div>
+              <div class="savings-price-note">(0.34 mm, near-identical spec for voiding spot assay)</div>
+            </div>
+          </div>
+          <div class="savings-footer">
+            <div class="savings-annual">This is your 3rd-largest repeated spend item (~$1,800 total). Worth a quote.</div>
+            <div class="savings-note savings-note-yellow">⚠ Verify Whatman 3MM Chr gives equivalent spot morphology in voiding assay before committing to bulk order.</div>
+          </div>
+        </div>
+
+        <!-- C&B Metabond already competitive -->
+        <div class="savings-card savings-ok">
+          <div class="savings-card-header">
+            <div>
+              <div class="savings-item-name">C&amp;B Metabond Catalyst (S371)</div>
+              <div class="savings-item-meta">3 orders · ~$215 / unit · already competitive</div>
+            </div>
+            <div class="savings-pct savings-pct-ok">Already optimal</div>
+          </div>
+          <div class="savings-compare">
+            <div class="savings-col savings-current">
+              <div class="savings-col-label">Current (Midwest Dental)</div>
+              <div class="savings-vendor">Midwest Dental</div>
+              <div class="savings-price">~$215 / unit</div>
+              <div class="savings-price-note">(3 units / order)</div>
+            </div>
+            <div class="savings-arrow">→</div>
+            <div class="savings-col savings-alt">
+              <div class="savings-col-label">Best found online</div>
+              <div class="savings-vendor">Crazy Dental Prices</div>
+              <div class="savings-price">$261 / unit</div>
+              <div class="savings-price-note">(more expensive than current!)</div>
+            </div>
+          </div>
+          <div class="savings-footer">
+            <div class="savings-annual">No action needed — your current source is already below market rate.</div>
+            <div class="savings-note savings-note-green">✓ Midwest Dental pricing is beating the lowest dental supplier we found. Keep this vendor.</div>
+          </div>
+        </div>
+
+      </div><!-- /.savings-grid -->
+    </div><!-- /#savings-section -->
+
+    <!-- Orders Table -->
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">All Orders &nbsp;<span id="table-count" style="font-weight:400;color:#94a3b8"></span></div>
+        <input type="text" class="search-input" id="table-search" placeholder="Search items, members..." oninput="onSearch()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr id="table-head">
+              <th onclick="sortTable(0)">Date</th>
+              <th onclick="sortTable(1)">Member</th>
+              <th onclick="sortTable(2)">Item</th>
+              <th onclick="sortTable(3)">Qty</th>
+              <th onclick="sortTable(4)">Price</th>
+              <th onclick="sortTable(5)">Status</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const SHEET_ID = '1XUnk4PGsL_GYofy43PWYiqs2y5CvlDPlzotu58ne97s';
+const GID      = '2021840259';
+
+const NAME_MAP = {
+  'hananh': 'Hannah', 'hannah': 'Hannah',
+  'Masahiro Kawatani': 'Masahiro', 'Masaihro': 'Masahiro', 'Masahiro': 'Masahiro',
+  'Monique': 'Monique', 'Mo': 'Monique',
+  'Hugo G': 'Hugo', 'Hugo Greenhill': 'Hugo', 'Hugo': 'Hugo',
+  'Yufen': 'Yufen', 'YUFEN': 'Yufen', 'yufen': 'Yufen',
+  'nia/yufen': 'Nia/Yufen',
+  'Lite Yang': 'Lite',
+  'Fang': 'Fang', 'Takao': 'Takao', 'Vijay': 'Vijay', 'nia': 'Nia',
+};
+
+const MEMBER_COLORS = {
+  'Masahiro': '#2563eb', 'Yufen':    '#16a34a', 'Fang':     '#dc2626',
+  'Hannah':   '#9333ea', 'Vijay':    '#ea580c', 'Monique':  '#0891b2',
+  'Hugo':     '#65a30d', 'Lite':     '#e11d48', 'Nia':      '#7c3aed',
+  'Takao':    '#b45309', 'Nia/Yufen':'#6b7280',
+};
+
+const VENDOR_MAP = {
+  'amazon.com':                    'Amazon',
+  'fishersci.com':                 'Fisher Scientific',
+  'fishersci.ca':                  'Fisher Scientific',
+  'sigmaaldrich.com':              'Sigma-Aldrich',
+  'thermofisher.com':              'Thermo Fisher',
+  'akoyabio.com':                  'Akoya Bio',
+  'my.akoyabio.com':               'Akoya Bio',
+  'midwestdental.com':             'Midwest Dental',
+  'instechlabs.com':               'Instech Labs',
+  'hellobio.com':                  'Hello Bio',
+  'preferredproduct.com':          'Preferred Product',
+  'takarabio.com':                 'Takara Bio',
+  'thomassci.com':                 'Thomas Scientific',
+  'us.sysmex-flowcytometry.com':   'Sysmex',
+  'medicaleshop.com':              'Medical eShop',
+  'wesuture.com':                  'WeSuture',
+  'southernbiotech.com':           'Southern Biotech',
+};
+
+const PALETTE = [
+  '#2563eb','#16a34a','#dc2626','#9333ea','#ea580c',
+  '#0891b2','#65a30d','#e11d48','#7c3aed','#b45309',
+  '#0f766e','#c2410c','#1d4ed8','#15803d','#7e22ce',
+];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allRows    = [];      // parsed, normalized purchase rows
+let filtered   = [];      // rows after date/member filter
+let tableRows  = [];      // rows after search
+let sortCol    = 0;
+let sortDir    = 'desc';
+let page       = 1;
+const PAGE_SIZE = 20;
+
+const charts = { monthly: null, member: null, vendor: null, items: null };
+
+// ── Data Loading ──────────────────────────────────────────────────────────────
+function loadData() {
+  setLoading(true);
+  const callbackName = '_gviz_cb_' + Date.now();
+
+  const timer = setTimeout(() => {
+    cleanup();
+    showError('Request timed out. Make sure you have internet access and the sheet is publicly viewable.');
+  }, 12000);
+
+  function cleanup() {
+    clearTimeout(timer);
+    delete window[callbackName];
+    const s = document.getElementById('_gviz_script');
+    if (s) s.remove();
+  }
+
+  window[callbackName] = function(resp) {
+    cleanup();
+    if (resp.status === 'error') {
+      showError('Google Sheets error: ' + (resp.errors || []).map(e => e.message).join(', '));
+      return;
+    }
+    try {
+      allRows = parseTable(resp.table);
+      onDataLoaded();
+    } catch (e) {
+      showError('Failed to parse data: ' + e.message);
+    }
+  };
+
+  const script = document.createElement('script');
+  script.id  = '_gviz_script';
+  script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${GID}`;
+  script.onerror = () => { cleanup(); showError('Failed to reach Google Sheets. Check your internet connection.'); };
+  document.head.appendChild(script);
+}
+
+// ── Parse gviz table ──────────────────────────────────────────────────────────
+function parseTable(table) {
+  const cols = table.cols;
+  const rows = [];
+
+  for (const row of table.rows) {
+    const c = row.c || [];
+    const get = (i) => (c[i] && c[i].v !== null && c[i].v !== undefined) ? c[i].v : null;
+    const fmt = (i) => (c[i] && c[i].f) ? c[i].f : null;
+
+    // Date: gviz returns "Date(year,month0,day,h,m,s)" for datetime cols
+    let date = null;
+    const dateVal = get(0);
+    if (dateVal) {
+      if (typeof dateVal === 'string' && dateVal.startsWith('Date(')) {
+        const m = dateVal.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+        if (m) date = new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+      } else if (fmt(0)) {
+        date = new Date(fmt(0));
+      }
+    }
+    if (!date || isNaN(date)) continue;
+
+    // Price
+    let price = null;
+    const priceRaw = get(4);
+    if (priceRaw !== null) {
+      if (typeof priceRaw === 'number') {
+        price = priceRaw;
+      } else {
+        const parsed = parseFloat(String(priceRaw).replace(/[$,\s]/g, ''));
+        if (!isNaN(parsed) && parsed > 0) price = parsed;
+      }
+    }
+
+    // Member name normalization
+    const rawName = String(get(1) || '').trim();
+    const member  = NAME_MAP[rawName] || rawName || 'Unknown';
+
+    // Vendor from link
+    const link   = String(get(6) || '').trim();
+    const vendor = extractVendor(link);
+
+    // Ordered status
+    const ordered = get(8);
+
+    rows.push({
+      date,
+      member,
+      item:     String(get(2) || '').trim(),
+      qty:      String(get(3) || '').trim(),
+      price,
+      link,
+      vendor,
+      ordered:  ordered === true || String(ordered).toUpperCase() === 'TRUE',
+      comments: String(get(7) || '').trim(),
+      orderDate:fmt(9) || String(get(9) || '').trim(),
+    });
+  }
+
+  // Sort by date descending by default
+  rows.sort((a, b) => b.date - a.date);
+  return rows;
+}
+
+function extractVendor(url) {
+  if (!url) return 'No Link';
+  try {
+    let host = new URL(url).hostname.replace(/^www\./, '');
+    if (VENDOR_MAP[host]) return VENDOR_MAP[host];
+    // Check partial matches
+    for (const [key, val] of Object.entries(VENDOR_MAP)) {
+      if (host.includes(key) || key.includes(host)) return val;
+    }
+    // Return shortened domain
+    return host.split('.').slice(-2).join('.');
+  } catch { return 'Other'; }
+}
+
+// ── After data loaded ─────────────────────────────────────────────────────────
+function onDataLoaded() {
+  // Populate member filter
+  const members = [...new Set(allRows.map(r => r.member))].sort();
+  const sel = document.getElementById('filter-member');
+  sel.innerHTML = '<option value="all">All Members</option>';
+  members.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    sel.appendChild(opt);
+  });
+
+  // Set default date range from data
+  const dates = allRows.map(r => r.date).filter(Boolean);
+  if (dates.length) {
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+    document.getElementById('filter-start').value = toMonthValue(minDate);
+    document.getElementById('filter-end').value   = toMonthValue(maxDate);
+  }
+
+  document.getElementById('last-updated').textContent =
+    `Last updated ${new Date().toLocaleString()} · ${allRows.length} total requests`;
+
+  setLoading(false);
+  document.getElementById('filters').style.display   = 'flex';
+  document.getElementById('dashboard').style.display = 'block';
+
+  applyFilters();
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const startVal  = document.getElementById('filter-start').value;
+  const endVal    = document.getElementById('filter-end').value;
+  const memberVal = document.getElementById('filter-member').value;
+
+  const startDate = startVal ? new Date(startVal + '-01') : null;
+  const endDate   = endVal   ? new Date(endVal   + '-01') : null;
+  if (endDate) endDate.setMonth(endDate.getMonth() + 1); // exclusive end
+
+  filtered = allRows.filter(r => {
+    if (startDate && r.date < startDate) return false;
+    if (endDate   && r.date >= endDate)  return false;
+    if (memberVal !== 'all' && r.member !== memberVal) return false;
+    return true;
+  });
+
+  const pricedCount = allRows.filter(r => r.price !== null).length;
+  const pricedFiltered = filtered.filter(r => r.price !== null).length;
+  document.getElementById('filter-count').textContent =
+    filtered.length < allRows.length
+      ? `Showing ${filtered.length} of ${allRows.length} orders`
+      : '';
+
+  page = 1;
+  updateAll();
+}
+
+function resetFilters() {
+  const dates = allRows.map(r => r.date).filter(Boolean);
+  if (dates.length) {
+    document.getElementById('filter-start').value = toMonthValue(new Date(Math.min(...dates)));
+    document.getElementById('filter-end').value   = toMonthValue(new Date(Math.max(...dates)));
+  }
+  document.getElementById('filter-member').value = 'all';
+  document.getElementById('table-search').value  = '';
+  applyFilters();
+}
+
+// ── Render all ────────────────────────────────────────────────────────────────
+function updateAll() {
+  renderKPIs();
+  renderMonthlyChart();
+  renderMemberChart();
+  renderVendorChart();
+  renderItemsChart();
+  applySearch();
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const priced = filtered.filter(r => r.price !== null);
+  const total  = priced.reduce((s, r) => s + r.price, 0);
+  const avg    = priced.length ? total / priced.length : 0;
+
+  // Top spender
+  const byMember = groupSum(priced, r => r.member);
+  const topMember = Object.entries(byMember).sort((a,b) => b[1]-a[1])[0];
+
+  document.getElementById('kpi-total').textContent   = '$' + fmt(total);
+  document.getElementById('kpi-total-sub').textContent = `${priced.length} priced orders`;
+  document.getElementById('kpi-orders').textContent  = filtered.length;
+  document.getElementById('kpi-orders-sub').textContent = `${filtered.filter(r=>r.ordered).length} fulfilled`;
+  document.getElementById('kpi-member').textContent  = topMember ? topMember[0] : '—';
+  document.getElementById('kpi-member-sub').textContent = topMember ? '$' + fmt(topMember[1]) : '';
+  document.getElementById('kpi-avg').textContent     = '$' + fmt(avg);
+  document.getElementById('kpi-avg-sub').textContent = `median $${fmt(median(priced.map(r=>r.price)))}`;
+}
+
+// ── Monthly chart ─────────────────────────────────────────────────────────────
+function renderMonthlyChart() {
+  const byMonth = {};
+  for (const r of filtered) {
+    if (r.price === null) continue;
+    const key = toMonthValue(r.date);
+    byMonth[key] = (byMonth[key] || 0) + r.price;
+  }
+  const labels = Object.keys(byMonth).sort();
+  const data   = labels.map(k => +byMonth[k].toFixed(2));
+
+  const ctx = document.getElementById('chart-monthly').getContext('2d');
+  if (charts.monthly) charts.monthly.destroy();
+  charts.monthly = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.map(fmtMonthLabel),
+      datasets: [{
+        label: 'Spend ($)',
+        data,
+        backgroundColor: 'rgba(37,99,235,0.75)',
+        borderColor: '#2563eb',
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' $' + fmt(ctx.parsed.y) } }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v), font: { size: 11 } },
+          grid: { color: '#f1f5f9' }
+        },
+        x: { ticks: { font: { size: 11 }, maxRotation: 45 }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Member chart ──────────────────────────────────────────────────────────────
+function renderMemberChart() {
+  const byMember = groupSum(filtered.filter(r => r.price !== null), r => r.member);
+  const entries  = Object.entries(byMember).sort((a,b) => b[1]-a[1]);
+  const labels   = entries.map(e => e[0]);
+  const data     = entries.map(e => +e[1].toFixed(2));
+  const colors   = labels.map(l => MEMBER_COLORS[l] || '#94a3b8');
+
+  const ctx = document.getElementById('chart-member').getContext('2d');
+  if (charts.member) charts.member.destroy();
+  charts.member = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Spend ($)',
+        data,
+        backgroundColor: colors.map(c => c + 'cc'),
+        borderColor: colors,
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' $' + fmt(ctx.parsed.x) } }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v), font: { size: 11 } },
+          grid: { color: '#f1f5f9' }
+        },
+        y: { ticks: { font: { size: 12, weight: '600' } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Vendor chart ──────────────────────────────────────────────────────────────
+function renderVendorChart() {
+  const byVendor = groupSum(filtered.filter(r => r.price !== null), r => r.vendor);
+  const entries  = Object.entries(byVendor).sort((a,b) => b[1]-a[1]);
+  // Roll up small vendors into "Other"
+  const TOP_N = 8;
+  let labels, data;
+  if (entries.length > TOP_N) {
+    const top   = entries.slice(0, TOP_N);
+    const other = entries.slice(TOP_N).reduce((s, e) => s + e[1], 0);
+    labels = [...top.map(e=>e[0]), 'Other'];
+    data   = [...top.map(e=>+e[1].toFixed(2)), +other.toFixed(2)];
+  } else {
+    labels = entries.map(e => e[0]);
+    data   = entries.map(e => +e[1].toFixed(2));
+  }
+
+  const ctx = document.getElementById('chart-vendor').getContext('2d');
+  if (charts.vendor) charts.vendor.destroy();
+  charts.vendor = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: PALETTE.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: $${fmt(ctx.parsed)}` } }
+      }
+    }
+  });
+}
+
+// ── Items chart ───────────────────────────────────────────────────────────────
+function renderItemsChart() {
+  const priced = filtered.filter(r => r.price !== null && r.item);
+  // Group by item name, sum spend
+  const byItem = groupSum(priced, r => r.item.length > 50 ? r.item.slice(0, 48) + '…' : r.item);
+  const entries = Object.entries(byItem).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const labels  = entries.map(e => e[0]);
+  const data    = entries.map(e => +e[1].toFixed(2));
+
+  const ctx = document.getElementById('chart-items').getContext('2d');
+  if (charts.items) charts.items.destroy();
+  charts.items = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Total Spend ($)',
+        data,
+        backgroundColor: PALETTE.slice(0, data.length).map(c => c + 'cc'),
+        borderColor: PALETTE.slice(0, data.length),
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' $' + fmt(ctx.parsed.x) } }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v), font: { size: 11 } },
+          grid: { color: '#f1f5f9' }
+        },
+        y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+function onSearch() {
+  page = 1;
+  applySearch();
+}
+
+function applySearch() {
+  const q = document.getElementById('table-search').value.toLowerCase().trim();
+  tableRows = q
+    ? filtered.filter(r =>
+        r.item.toLowerCase().includes(q) ||
+        r.member.toLowerCase().includes(q) ||
+        r.vendor.toLowerCase().includes(q) ||
+        r.comments.toLowerCase().includes(q))
+    : [...filtered];
+
+  // Apply sort
+  applySortToTableRows();
+  renderTable();
+}
+
+function sortTable(col) {
+  const ths = document.querySelectorAll('#table-head th');
+  ths.forEach((th, i) => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (i === col) th.classList.add(sortDir === 'asc' && sortCol === col ? 'sort-desc' : 'sort-asc');
+  });
+
+  if (sortCol === col) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortCol = col;
+    sortDir = col === 4 ? 'desc' : 'asc'; // price defaults to desc
+  }
+  ths[sortCol].className = 'sort-' + sortDir;
+  page = 1;
+  applySortToTableRows();
+  renderTable();
+}
+
+function applySortToTableRows() {
+  const dir = sortDir === 'asc' ? 1 : -1;
+  tableRows.sort((a, b) => {
+    switch (sortCol) {
+      case 0: return dir * (a.date - b.date);
+      case 1: return dir * a.member.localeCompare(b.member);
+      case 2: return dir * a.item.localeCompare(b.item);
+      case 3: return dir * a.qty.localeCompare(b.qty);
+      case 4: return dir * ((a.price || 0) - (b.price || 0));
+      case 5: return dir * (Number(a.ordered) - Number(b.ordered));
+      default: return 0;
+    }
+  });
+}
+
+function renderTable() {
+  const start  = (page - 1) * PAGE_SIZE;
+  const slice  = tableRows.slice(start, start + PAGE_SIZE);
+  const tbody  = document.getElementById('table-body');
+  document.getElementById('table-count').textContent =
+    `(${tableRows.length}${tableRows.length < filtered.length ? ' matching' : ''})`;
+
+  tbody.innerHTML = slice.map(r => {
+    const color = MEMBER_COLORS[r.member] || '#94a3b8';
+    const price = r.price !== null ? '$' + r.price.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    const badge = r.ordered
+      ? '<span class="badge badge-ordered">Ordered</span>'
+      : '<span class="badge badge-pending">Pending</span>';
+    const link  = r.link
+      ? `<a class="link-btn" href="${esc(r.link)}" target="_blank" rel="noopener">↗ Link</a>`
+      : '<span style="color:#cbd5e1">—</span>';
+    return `<tr>
+      <td style="white-space:nowrap;color:#64748b">${fmtDate(r.date)}</td>
+      <td><span class="member-chip" style="background:${color}">${esc(r.member)}</span></td>
+      <td class="item-cell" title="${esc(r.item)}">${esc(r.item)}</td>
+      <td style="color:#64748b">${esc(r.qty)}</td>
+      <td style="font-weight:600;white-space:nowrap">${price}</td>
+      <td>${badge}</td>
+      <td>${link}</td>
+    </tr>`;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(tableRows.length / PAGE_SIZE);
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  const start = (page - 1) * PAGE_SIZE + 1;
+  const end   = Math.min(page * PAGE_SIZE, tableRows.length);
+
+  let html = `<span class="page-info">${start}–${end} of ${tableRows.length}</span>`;
+  html += `<button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+
+  // Show window of pages
+  const WING = 2;
+  const pages = new Set([1, totalPages]);
+  for (let i = Math.max(1, page-WING); i <= Math.min(totalPages, page+WING); i++) pages.add(i);
+  const sorted = [...pages].sort((a,b)=>a-b);
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) html += `<span class="page-info">…</span>`;
+    html += `<button class="page-btn ${p===page?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    prev = p;
+  }
+
+  html += `<button class="page-btn" onclick="goPage(${page+1})" ${page===totalPages?'disabled':''}>›</button>`;
+  el.innerHTML = html;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(tableRows.length / PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  page = p;
+  renderTable();
+  document.querySelector('.table-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function groupSum(rows, keyFn) {
+  const out = {};
+  for (const r of rows) {
+    const k = keyFn(r);
+    out[k] = (out[k] || 0) + r.price;
+  }
+  return out;
+}
+
+function fmt(n) {
+  if (!n && n !== 0) return '—';
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function toMonthValue(d) {
+  // Returns "YYYY-MM" for input[type=month]
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function fmtMonthLabel(s) {
+  // "2024-11" → "Nov '24"
+  const [y, m] = s.split('-');
+  return new Date(+y, +m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
+
+function median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a,b)=>a-b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid-1] + s[mid]) / 2;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── UI state helpers ──────────────────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById('loading').style.display     = on ? 'block' : 'none';
+  document.getElementById('dashboard').style.display   = on ? 'none' : (allRows.length ? 'block' : 'none');
+  document.getElementById('error-container').style.display = 'none';
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = on;
+  btn.textContent = on ? 'Loading…' : '↻ Refresh';
+}
+
+function showError(msg) {
+  document.getElementById('loading').style.display   = 'none';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('refresh-btn').disabled    = false;
+  document.getElementById('refresh-btn').textContent = '↻ Retry';
+  document.getElementById('last-updated').textContent = 'Failed to load data';
+  const container = document.getElementById('error-container');
+  container.style.display = 'block';
+  container.innerHTML = `<div class="error-box">
+    <h3>Could not load data</h3>
+    <p>${esc(msg)}</p>
+    <p style="margin-top:8px">Make sure the Google Sheet is set to <strong>"Anyone with the link can view"</strong> and try refreshing.</p>
+  </div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
