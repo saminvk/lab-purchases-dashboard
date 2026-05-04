@@ -748,7 +748,7 @@ function loadData() {
 
   const script = document.createElement('script');
   script.id  = '_gviz_script';
-  script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${GID}`;
+  script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${callbackName}`;
   script.onerror = () => { cleanup(); showError('Failed to reach Google Sheets. Check your internet connection.'); };
   document.head.appendChild(script);
 }
